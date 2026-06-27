@@ -51,7 +51,7 @@ static uint8_t status_update_step;
 static uint16_t clear_y;
 static GimbalMenu_ServiceCallback service_callback;
 
-static const char *main_items[] = {"Run Mode", "MIT Params", "Zero / Calib", "Motor", "Display", "About"};
+static const char *main_items[] = {"Run Mode", "MIT Params", "Motor", "Display", "About"};
 static const char *run_items[] = {"Stop Motors", "MIT Circle", "Manual Jog", "Center Home"};
 static const char *param_items[] = {"KP", "KD", "Torque FF", "Amp YAW", "Amp Pitch", "Period", "Reset Default"};
 static const char *zero_items[] = {"Set Soft Zero", "Save Zero YAW", "Save Zero Pitch", "Save Both Zero"};
@@ -430,12 +430,31 @@ void GimbalMenu_HandleEvent(GimbalMenu *menu,
     return;
   }
 
+  page = current_page();
+
   if (event->key == GKEY_CENTER && event->type == GKEY_EVENT_VERY_LONG) {
     GimbalControl_EStop(ctrl);
     set_msg("E-STOP");
     return;
   }
+  if (event->key == GKEY_CENTER && event->type == GKEY_EVENT_ZERO) {
+    if (ctrl->mode == CTRL_MANUAL && page == PAGE_STATUS) {
+      if (motor_online(yaw) == 0U || motor_online(pitch) == 0U) {
+        set_msg("Motor offline");
+        return;
+      }
+      ctrl->mode = CTRL_STOP;
+      ctrl->req_save_zero_yaw = 1U;
+      ctrl->req_save_zero_pitch = 1U;
+      set_msg("Save both zero");
+    }
+    return;
+  }
   if (event->key == GKEY_CENTER && event->type == GKEY_EVENT_LONG) {
+    if (ctrl->mode == CTRL_MANUAL && page == PAGE_STATUS) {
+      set_msg("Hold 3s zero");
+      return;
+    }
     GimbalControl_RequestHome(ctrl, now_ms);
     page_stack[0] = PAGE_MAIN;
     page_depth = 0U;
@@ -475,7 +494,6 @@ void GimbalMenu_HandleEvent(GimbalMenu *menu,
     return;
   }
 
-  page = current_page();
   if (ctrl->mode == CTRL_MANUAL && page == PAGE_STATUS && event->type == GKEY_EVENT_SHORT) {
     if (event->key == GKEY_LEFT) {
       GimbalControl_AddManualYaw(ctrl, 1.0f);
@@ -528,12 +546,10 @@ void GimbalMenu_HandleEvent(GimbalMenu *menu,
       } else if (index == 1U) {
         push_page(PAGE_PARAM);
       } else if (index == 2U) {
-        push_page(PAGE_ZERO);
-      } else if (index == 3U) {
         push_page(PAGE_MOTOR);
-      } else if (index == 4U) {
+      } else if (index == 3U) {
         push_page(PAGE_DISPLAY);
-      } else if (index == 5U) {
+      } else if (index == 4U) {
         push_page(PAGE_ABOUT);
       }
     } else if (page == PAGE_RUN) {
@@ -667,7 +683,11 @@ static void draw_status_group(uint8_t group,
       if (clear_bg) {
         LCD_Fill(0, 138, LCD_W, 208, BLACK);
       }
-      draw_text(0, 138, "CENTER:MENU  LONG:HOME", GRAY, BLACK, 16);
+      if (ctrl->mode == CTRL_MANUAL) {
+        draw_text(0, 138, "CENTER3S SAVE ZERO", GRAY, BLACK, 16);
+      } else {
+        draw_text(0, 138, "CENTER:MENU  LONG:HOME", GRAY, BLACK, 16);
+      }
       draw_text(0, 164, "MSG:", WHITE, BLACK, 16);
       draw_text(42, 164, status_msg, LBBLUE, BLACK, 16);
       draw_text(0, 188, "KEY ADC", GRAY, BLACK, 16);

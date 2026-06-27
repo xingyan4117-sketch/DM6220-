@@ -17,6 +17,7 @@ typedef enum {
   GKEY_EVENT_NONE = 0,
   GKEY_EVENT_SHORT,
   GKEY_EVENT_LONG,
+  GKEY_EVENT_ZERO,
   GKEY_EVENT_VERY_LONG
 } GimbalKeyEventType;
 

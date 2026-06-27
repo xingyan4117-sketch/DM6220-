@@ -3,7 +3,8 @@
 
 #define GKEY_DEBOUNCE_MS       20U
 #define GKEY_LONG_MS          800U
-#define GKEY_VERY_LONG_MS    2000U
+#define GKEY_ZERO_MS         3000U
+#define GKEY_VERY_LONG_MS    5000U
 #define GKEY_QUEUE_LEN          8U
 
 extern uint16_t adc_val[2];
@@ -14,6 +15,7 @@ typedef struct {
   uint32_t raw_changed_ms;
   uint32_t press_start_ms;
   uint8_t long_sent;
+  uint8_t zero_sent;
   uint8_t very_long_sent;
   uint8_t held_used;
 } GimbalKeyScanner;
@@ -103,6 +105,7 @@ void GimbalKeys_Task(uint32_t now_ms)
     if (raw != GKEY_NONE) {
       scanner.press_start_ms = now_ms;
       scanner.long_sent = 0U;
+      scanner.zero_sent = 0U;
       scanner.very_long_sent = 0U;
       scanner.held_used = 0U;
     } else if (old != GKEY_NONE) {
@@ -117,8 +120,13 @@ void GimbalKeys_Task(uint32_t now_ms)
     uint32_t held = now_ms - scanner.press_start_ms;
     if (held >= GKEY_VERY_LONG_MS && scanner.very_long_sent == 0U) {
       scanner.very_long_sent = 1U;
+      scanner.zero_sent = 1U;
       scanner.long_sent = 1U;
       push_event(scanner.stable, GKEY_EVENT_VERY_LONG);
+    } else if (held >= GKEY_ZERO_MS && scanner.zero_sent == 0U) {
+      scanner.zero_sent = 1U;
+      scanner.long_sent = 1U;
+      push_event(scanner.stable, GKEY_EVENT_ZERO);
     } else if (held >= GKEY_LONG_MS && scanner.long_sent == 0U) {
       scanner.long_sent = 1U;
       push_event(scanner.stable, GKEY_EVENT_LONG);
