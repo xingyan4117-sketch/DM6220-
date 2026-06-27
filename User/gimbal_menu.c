@@ -478,16 +478,16 @@ void GimbalMenu_HandleEvent(GimbalMenu *menu,
   page = current_page();
   if (ctrl->mode == CTRL_MANUAL && page == PAGE_STATUS && event->type == GKEY_EVENT_SHORT) {
     if (event->key == GKEY_LEFT) {
-      GimbalControl_AddManualYaw(ctrl, -1.0f);
-      return;
-    } else if (event->key == GKEY_RIGHT) {
       GimbalControl_AddManualYaw(ctrl, 1.0f);
       return;
+    } else if (event->key == GKEY_RIGHT) {
+      GimbalControl_AddManualYaw(ctrl, -1.0f);
+      return;
     } else if (event->key == GKEY_UP) {
-      GimbalControl_AddManualPitch(ctrl, 1.0f);
+      GimbalControl_AddManualPitch(ctrl, -1.0f);
       return;
     } else if (event->key == GKEY_DOWN) {
-      GimbalControl_AddManualPitch(ctrl, -1.0f);
+      GimbalControl_AddManualPitch(ctrl, 1.0f);
       return;
     }
   }
@@ -585,7 +585,8 @@ static void draw_status_group(uint8_t group,
                               const GimbalControlState *ctrl,
                               const DM_Motor_Info_Typedef *yaw,
                               const DM_Motor_Info_Typedef *pitch,
-                              uint16_t key_adc)
+                              uint16_t key_adc,
+                              uint8_t clear_bg)
 {
   float yaw_d = 0.0f;
   float yaw_v = 0.0f;
@@ -603,36 +604,48 @@ static void draw_status_group(uint8_t group,
 
   switch (group) {
     case 0U:
-      LCD_Fill(0, 0, LCD_W, 28, BLACK);
+      if (clear_bg) {
+        LCD_Fill(0, 0, LCD_W, 28, BLACK);
+      }
       draw_text(0, 0, "GIMBAL MIT", WHITE, BLACK, 24);
       draw_text(180, 4, GimbalControl_ModeName(ctrl->mode), YELLOW, BLACK, 16);
       break;
     case 1U:
-      LCD_Fill(0, 32, LCD_W, 52, BLACK);
+      if (clear_bg) {
+        LCD_Fill(0, 32, LCD_W, 52, BLACK);
+      }
       draw_text(0, 32, "YAW", CYAN, BLACK, 16);
       draw_text(40, 32, motor_online(yaw) ? "ON " : "OFF", motor_online(yaw) ? GREEN : RED, BLACK, 16);
       draw_text(86, 32, "P", WHITE, BLACK, 16);
       draw_float(102, 32, yaw_d, CYAN);
       break;
     case 2U:
-      LCD_Fill(184, 32, LCD_W, 52, BLACK);
+      if (clear_bg) {
+        LCD_Fill(184, 32, LCD_W, 52, BLACK);
+      }
       draw_text(184, 32, "V", WHITE, BLACK, 16);
       draw_float(200, 32, yaw_v, WHITE);
       break;
     case 3U:
-      LCD_Fill(0, 55, LCD_W, 75, BLACK);
+      if (clear_bg) {
+        LCD_Fill(0, 55, LCD_W, 75, BLACK);
+      }
       draw_text(0, 55, "PIT", MAGENTA, BLACK, 16);
       draw_text(40, 55, motor_online(pitch) ? "ON " : "OFF", motor_online(pitch) ? GREEN : RED, BLACK, 16);
       draw_text(86, 55, "P", WHITE, BLACK, 16);
       draw_float(102, 55, pit_d, MAGENTA);
       break;
     case 4U:
-      LCD_Fill(184, 55, LCD_W, 75, BLACK);
+      if (clear_bg) {
+        LCD_Fill(184, 55, LCD_W, 75, BLACK);
+      }
       draw_text(184, 55, "V", WHITE, BLACK, 16);
       draw_float(200, 55, pit_v, WHITE);
       break;
     case 5U:
-      LCD_Fill(0, 84, LCD_W, 104, BLACK);
+      if (clear_bg) {
+        LCD_Fill(0, 84, LCD_W, 104, BLACK);
+      }
       draw_text(0, 84, "KP", WHITE, BLACK, 16);
       draw_float(24, 84, ctrl->kp, YELLOW);
       draw_text(96, 84, "KD", WHITE, BLACK, 16);
@@ -641,7 +654,9 @@ static void draw_status_group(uint8_t group,
       draw_float(208, 84, ctrl->torque_ff, YELLOW);
       break;
     case 6U:
-      LCD_Fill(0, 108, LCD_W, 128, BLACK);
+      if (clear_bg) {
+        LCD_Fill(0, 108, LCD_W, 128, BLACK);
+      }
       draw_text(0, 108, "AMP", WHITE, BLACK, 16);
       draw_float(40, 108, ctrl->yaw_amp_deg, CYAN);
       draw_float(112, 108, ctrl->pitch_amp_deg, MAGENTA);
@@ -649,7 +664,9 @@ static void draw_status_group(uint8_t group,
       LCD_ShowIntNum(224, 108, ctrl->period_ms, 4, YELLOW, BLACK, 16);
       break;
     case 7U:
-      LCD_Fill(0, 138, LCD_W, 208, BLACK);
+      if (clear_bg) {
+        LCD_Fill(0, 138, LCD_W, 208, BLACK);
+      }
       draw_text(0, 138, "CENTER:MENU  LONG:HOME", GRAY, BLACK, 16);
       draw_text(0, 164, "MSG:", WHITE, BLACK, 16);
       draw_text(42, 164, status_msg, LBBLUE, BLACK, 16);
@@ -677,7 +694,7 @@ static void draw_status_incremental(const GimbalControlState *ctrl,
     }
 
     if (render_step >= 1U && render_step <= 8U) {
-      draw_status_group((uint8_t)(render_step - 1U), ctrl, yaw, pitch, key_adc);
+      draw_status_group((uint8_t)(render_step - 1U), ctrl, yaw, pitch, key_adc, 1U);
       render_step++;
       return;
     }
@@ -688,7 +705,7 @@ static void draw_status_incremental(const GimbalControlState *ctrl,
     return;
   }
 
-  draw_status_group(status_update_step, ctrl, yaw, pitch, key_adc);
+  draw_status_group(status_update_step, ctrl, yaw, pitch, key_adc, 0U);
   status_update_step++;
   if (status_update_step >= 8U) {
     status_update_step = 0U;

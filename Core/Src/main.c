@@ -144,26 +144,22 @@ static void ManualJogTask(uint32_t now_ms)
     return;
   }
 
-  if (GimbalKeys_GetHeldMs(now_ms) < 250U) {
-    return;
-  }
-
   if ((now_ms - last_jog_ms) < 20U) {
     return;
   }
   last_jog_ms = now_ms;
 
   if (held == GKEY_LEFT) {
-    GimbalControl_AddManualYaw(&g_ctrl, -0.25f);
+    GimbalControl_AddManualYaw(&g_ctrl, 0.5f);
     GimbalKeys_MarkHeldUsed();
   } else if (held == GKEY_RIGHT) {
-    GimbalControl_AddManualYaw(&g_ctrl, 0.25f);
+    GimbalControl_AddManualYaw(&g_ctrl, -0.5f);
     GimbalKeys_MarkHeldUsed();
   } else if (held == GKEY_UP) {
-    GimbalControl_AddManualPitch(&g_ctrl, 0.25f);
+    GimbalControl_AddManualPitch(&g_ctrl, -0.5f);
     GimbalKeys_MarkHeldUsed();
   } else if (held == GKEY_DOWN) {
-    GimbalControl_AddManualPitch(&g_ctrl, -0.25f);
+    GimbalControl_AddManualPitch(&g_ctrl, 0.5f);
     GimbalKeys_MarkHeldUsed();
   }
 }
@@ -245,7 +241,7 @@ int main(void)
       if (g_ctrl.lcd_on && GimbalMenu_NeedsRedraw()) {
         GimbalMenu_Render(&g_menu, &g_ctrl, &DM_Motor_Yaw, &DM_Motor_Pitch, GimbalKeys_GetAdcRaw());
         last_lcd_ms = now;
-      } else if ((now - last_lcd_ms) >= 25U) {
+      } else if ((now - last_lcd_ms) >= 250U) {
         last_lcd_ms = now;
         if (g_ctrl.lcd_on && GimbalMenu_IsStatusPage()) {
           GimbalMenu_Render(&g_menu, &g_ctrl, &DM_Motor_Yaw, &DM_Motor_Pitch, GimbalKeys_GetAdcRaw());
