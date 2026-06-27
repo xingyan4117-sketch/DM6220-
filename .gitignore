@@ -1,0 +1,31 @@
+# Keil / ARMCC build outputs
+*.o
+*.obj
+*.d
+*.crf
+*.lst
+*.map
+*.axf
+*.elf
+*.hex
+*.bin
+*.lib
+*.lnp
+*.htm
+*.build_log.htm
+*.uvguix.*
+*.uvoptx
+*.uvgui.*
+*.dep
+*.bak
+
+# Local build logs
+codex_build.log
+build.log
+
+# Common editor/system files
+.DS_Store
+Thumbs.db
+*.swp
+*.tmp
+
