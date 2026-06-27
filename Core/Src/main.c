@@ -204,7 +204,7 @@ int main(void)
       if (g_ctrl.lcd_on && GimbalMenu_NeedsRedraw()) {
         GimbalMenu_Render(&g_menu, &g_ctrl, &DM_Motor_Yaw, &DM_Motor_Pitch, GimbalKeys_GetAdcRaw());
         last_lcd_ms = now;
-      } else if ((now - last_lcd_ms) >= 200U) {
+      } else if ((now - last_lcd_ms) >= 25U) {
         last_lcd_ms = now;
         if (g_ctrl.lcd_on && GimbalMenu_IsStatusPage()) {
           GimbalMenu_Render(&g_menu, &g_ctrl, &DM_Motor_Yaw, &DM_Motor_Pitch, GimbalKeys_GetAdcRaw());
