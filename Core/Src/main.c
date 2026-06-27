@@ -128,6 +128,46 @@ static void SendMitFrame(void)
                    g_cmd.kp, g_cmd.kd, g_cmd.torque_ff);
 }
 
+static void ManualJogTask(uint32_t now_ms)
+{
+  static uint32_t last_jog_ms = 0U;
+  GimbalKeyId held;
+
+  if (g_ctrl.mode != CTRL_MANUAL || GimbalMenu_IsStatusPage() == 0U) {
+    last_jog_ms = now_ms;
+    return;
+  }
+
+  held = GimbalKeys_GetHeldKey();
+  if (held == GKEY_NONE || held == GKEY_CENTER) {
+    last_jog_ms = now_ms;
+    return;
+  }
+
+  if (GimbalKeys_GetHeldMs(now_ms) < 250U) {
+    return;
+  }
+
+  if ((now_ms - last_jog_ms) < 20U) {
+    return;
+  }
+  last_jog_ms = now_ms;
+
+  if (held == GKEY_LEFT) {
+    GimbalControl_AddManualYaw(&g_ctrl, -0.25f);
+    GimbalKeys_MarkHeldUsed();
+  } else if (held == GKEY_RIGHT) {
+    GimbalControl_AddManualYaw(&g_ctrl, 0.25f);
+    GimbalKeys_MarkHeldUsed();
+  } else if (held == GKEY_UP) {
+    GimbalControl_AddManualPitch(&g_ctrl, 0.25f);
+    GimbalKeys_MarkHeldUsed();
+  } else if (held == GKEY_DOWN) {
+    GimbalControl_AddManualPitch(&g_ctrl, -0.25f);
+    GimbalKeys_MarkHeldUsed();
+  }
+}
+
 static void MenuServiceDuringDraw(void)
 {
   static uint32_t last_service_ms = 0U;
@@ -198,6 +238,7 @@ int main(void)
       }
 
       ApplyControlRequests();
+      ManualJogTask(now);
       GimbalControl_Update(&g_ctrl, now, &g_cmd);
       SendMitFrame();
 

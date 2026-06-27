@@ -29,6 +29,8 @@ void GimbalKeys_Init(void);
 void GimbalKeys_Task(uint32_t now_ms);
 uint8_t GimbalKeys_GetEvent(GimbalKeyEvent *event);
 GimbalKeyId GimbalKeys_GetHeldKey(void);
+uint32_t GimbalKeys_GetHeldMs(uint32_t now_ms);
+void GimbalKeys_MarkHeldUsed(void);
 uint16_t GimbalKeys_GetAdcRaw(void);
 
 #endif

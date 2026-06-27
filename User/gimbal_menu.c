@@ -265,6 +265,8 @@ static void run_action(GimbalControlState *ctrl, uint8_t index, uint32_t now_ms)
   } else if (index == 2U) {
     GimbalControl_SetMode(ctrl, CTRL_MANUAL, now_ms);
     set_msg("Mode MANUAL");
+    page_stack[0] = PAGE_STATUS;
+    page_depth = 0U;
   } else if (index == 3U) {
     GimbalControl_RequestHome(ctrl, now_ms);
     set_msg("Homing");

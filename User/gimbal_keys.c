@@ -15,6 +15,7 @@ typedef struct {
   uint32_t press_start_ms;
   uint8_t long_sent;
   uint8_t very_long_sent;
+  uint8_t held_used;
 } GimbalKeyScanner;
 
 static GimbalKeyScanner scanner;
@@ -103,8 +104,9 @@ void GimbalKeys_Task(uint32_t now_ms)
       scanner.press_start_ms = now_ms;
       scanner.long_sent = 0U;
       scanner.very_long_sent = 0U;
+      scanner.held_used = 0U;
     } else if (old != GKEY_NONE) {
-      if (scanner.long_sent == 0U && scanner.very_long_sent == 0U) {
+      if (scanner.long_sent == 0U && scanner.very_long_sent == 0U && scanner.held_used == 0U) {
         push_event(old, GKEY_EVENT_SHORT);
       }
     }
@@ -137,6 +139,21 @@ uint8_t GimbalKeys_GetEvent(GimbalKeyEvent *event)
 GimbalKeyId GimbalKeys_GetHeldKey(void)
 {
   return scanner.stable;
+}
+
+uint32_t GimbalKeys_GetHeldMs(uint32_t now_ms)
+{
+  if (scanner.stable == GKEY_NONE) {
+    return 0U;
+  }
+  return now_ms - scanner.press_start_ms;
+}
+
+void GimbalKeys_MarkHeldUsed(void)
+{
+  if (scanner.stable != GKEY_NONE) {
+    scanner.held_used = 1U;
+  }
 }
 
 uint16_t GimbalKeys_GetAdcRaw(void)
