@@ -18,6 +18,7 @@ static GimbalControlState g_ctrl;
 static GimbalMitCommand g_cmd;
 static GimbalMenu g_menu;
 static uint8_t g_mit_tx_started;
+static uint32_t g_mit_pause_until_ms;
 
 void SystemClock_Config(void);
 
@@ -56,12 +57,14 @@ static void ApplyControlRequests(void)
   if (g_ctrl.req_save_zero_yaw) {
     g_ctrl.req_save_zero_yaw = 0U;
     if (DM_Motor_Yaw.Data.State != 0) {
+      g_mit_pause_until_ms = HAL_GetTick() + 100U;
       DM_Motor_Command(&FDCAN1TxFrame, 0x01, Motor_Save_Zero_Position);
     }
   }
   if (g_ctrl.req_save_zero_pitch) {
     g_ctrl.req_save_zero_pitch = 0U;
     if (DM_Motor_Pitch.Data.State != 0) {
+      g_mit_pause_until_ms = HAL_GetTick() + 100U;
       DM_Motor_Command(&FDCAN2TxFrame, 0x02, Motor_Save_Zero_Position);
     }
   }
@@ -77,6 +80,9 @@ static void ApplyControlRequests(void)
 static void SendMitFrame(void)
 {
   if (g_mit_tx_started == 0U || g_ctrl.motors_enabled == 0U) {
+    return;
+  }
+  if ((int32_t)(HAL_GetTick() - g_mit_pause_until_ms) < 0) {
     return;
   }
 
@@ -105,7 +111,6 @@ int main(void)
   uint32_t last_loop_ms;
   uint32_t last_key_ms = 0U;
   uint32_t last_lcd_ms = 0U;
-  uint32_t last_alive_ms = 0U;
   GimbalKeyEvent key_event;
 
   HAL_Init();
@@ -161,11 +166,6 @@ int main(void)
       ApplyControlRequests();
       GimbalControl_Update(&g_ctrl, now, &g_cmd);
       SendMitFrame();
-
-      if ((now - last_alive_ms) >= 500U) {
-        last_alive_ms = now;
-        HAL_GPIO_TogglePin(LCD_BLK_GPIO_Port, LCD_BLK_Pin);
-      }
 
       if (g_ctrl.lcd_on && GimbalMenu_NeedsRedraw()) {
         GimbalMenu_Render(&g_menu, &g_ctrl, &DM_Motor_Yaw, &DM_Motor_Pitch, GimbalKeys_GetAdcRaw());
