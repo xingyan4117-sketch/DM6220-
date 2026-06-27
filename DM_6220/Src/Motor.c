@@ -66,7 +66,7 @@ static int float_to_uint(float X_float, float X_min, float X_max, int bits){
     return (int) ((X_float-offset)*((float)((1<<bits)-1))/span);
 }
 
-void DM_Motor_Command(FDCAN_TxFrame_TypeDef *TxFrame,uint16_t TxStdId,uint8_t CMD){
+HAL_StatusTypeDef DM_Motor_Command_Status(FDCAN_TxFrame_TypeDef *TxFrame,uint16_t TxStdId,uint8_t CMD){
 
 	 TxFrame->Header.Identifier = TxStdId;
 	
@@ -96,7 +96,13 @@ void DM_Motor_Command(FDCAN_TxFrame_TypeDef *TxFrame,uint16_t TxStdId,uint8_t CM
 	    break;   
 	}
 	
-   (void)motor_try_send(TxFrame);
+   return motor_try_send(TxFrame);
+
+}
+
+void DM_Motor_Command(FDCAN_TxFrame_TypeDef *TxFrame,uint16_t TxStdId,uint8_t CMD){
+
+   (void)DM_Motor_Command_Status(TxFrame, TxStdId, CMD);
 
 }
 

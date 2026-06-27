@@ -95,7 +95,9 @@ Zero-save safety:
 - The menu blocks save-zero if the target motor is offline.
 - Confirm page switches mode to `CALIB`, then the save request is executed as
   `CTRL_STOP`.
-- MIT output is paused briefly after a save-zero command so the special CAN
-  frame is not immediately overwritten by normal position control frames.
+- Enable/Disable/Save-zero commands are treated as protected motor command
+  frames. MIT output is paused while such a request is pending and briefly
+  after the command is accepted by FDCAN, so the special CAN frame is not
+  immediately overwritten by normal position control frames.
 - Put the mechanism at the desired mechanical center before pressing YES.
 - Keep `SAVE_ZERO_ON_BOOT` in `Core/Inc/main.h` at `0` for normal operation.

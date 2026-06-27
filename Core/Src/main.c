@@ -22,6 +22,21 @@ static uint32_t g_mit_pause_until_ms;
 
 void SystemClock_Config(void);
 
+static uint8_t HasPendingMotorCommand(void)
+{
+  return (g_ctrl.req_disable_yaw || g_ctrl.req_disable_pitch ||
+          g_ctrl.req_enable_yaw || g_ctrl.req_enable_pitch ||
+          g_ctrl.req_save_zero_yaw || g_ctrl.req_save_zero_pitch) ? 1U : 0U;
+}
+
+static void PauseMitFor(uint32_t now_ms, uint32_t duration_ms)
+{
+  uint32_t until = now_ms + duration_ms;
+  if ((int32_t)(until - g_mit_pause_until_ms) > 0) {
+    g_mit_pause_until_ms = until;
+  }
+}
+
 static void Motors_BootEnable(void)
 {
   DM_Motor_Command(&FDCAN1TxFrame, 0x01, Motor_Enable);
@@ -38,34 +53,50 @@ static void Motors_BootEnable(void)
 
 static void ApplyControlRequests(void)
 {
+  uint32_t now = HAL_GetTick();
+
   if (g_ctrl.req_disable_yaw) {
-    g_ctrl.req_disable_yaw = 0U;
-    DM_Motor_Command(&FDCAN1TxFrame, 0x01, Motor_Disable);
+    PauseMitFor(now, 100U);
+    if (DM_Motor_Command_Status(&FDCAN1TxFrame, 0x01, Motor_Disable) == HAL_OK) {
+      g_ctrl.req_disable_yaw = 0U;
+    }
   }
   if (g_ctrl.req_disable_pitch) {
-    g_ctrl.req_disable_pitch = 0U;
-    DM_Motor_Command(&FDCAN2TxFrame, 0x02, Motor_Disable);
+    PauseMitFor(now, 100U);
+    if (DM_Motor_Command_Status(&FDCAN2TxFrame, 0x02, Motor_Disable) == HAL_OK) {
+      g_ctrl.req_disable_pitch = 0U;
+    }
   }
   if (g_ctrl.req_enable_yaw) {
-    g_ctrl.req_enable_yaw = 0U;
-    DM_Motor_Command(&FDCAN1TxFrame, 0x01, Motor_Enable);
+    PauseMitFor(now, 200U);
+    if (DM_Motor_Command_Status(&FDCAN1TxFrame, 0x01, Motor_Enable) == HAL_OK) {
+      g_ctrl.req_enable_yaw = 0U;
+    }
   }
   if (g_ctrl.req_enable_pitch) {
-    g_ctrl.req_enable_pitch = 0U;
-    DM_Motor_Command(&FDCAN2TxFrame, 0x02, Motor_Enable);
+    PauseMitFor(now, 200U);
+    if (DM_Motor_Command_Status(&FDCAN2TxFrame, 0x02, Motor_Enable) == HAL_OK) {
+      g_ctrl.req_enable_pitch = 0U;
+    }
   }
   if (g_ctrl.req_save_zero_yaw) {
-    g_ctrl.req_save_zero_yaw = 0U;
     if (DM_Motor_Yaw.Data.State != 0) {
-      g_mit_pause_until_ms = HAL_GetTick() + 100U;
-      DM_Motor_Command(&FDCAN1TxFrame, 0x01, Motor_Save_Zero_Position);
+      PauseMitFor(now, 500U);
+      if (DM_Motor_Command_Status(&FDCAN1TxFrame, 0x01, Motor_Save_Zero_Position) == HAL_OK) {
+        g_ctrl.req_save_zero_yaw = 0U;
+      }
+    } else {
+      g_ctrl.req_save_zero_yaw = 0U;
     }
   }
   if (g_ctrl.req_save_zero_pitch) {
-    g_ctrl.req_save_zero_pitch = 0U;
     if (DM_Motor_Pitch.Data.State != 0) {
-      g_mit_pause_until_ms = HAL_GetTick() + 100U;
-      DM_Motor_Command(&FDCAN2TxFrame, 0x02, Motor_Save_Zero_Position);
+      PauseMitFor(now, 500U);
+      if (DM_Motor_Command_Status(&FDCAN2TxFrame, 0x02, Motor_Save_Zero_Position) == HAL_OK) {
+        g_ctrl.req_save_zero_pitch = 0U;
+      }
+    } else {
+      g_ctrl.req_save_zero_pitch = 0U;
     }
   }
   if (g_ctrl.req_power_apply) {
@@ -80,6 +111,9 @@ static void ApplyControlRequests(void)
 static void SendMitFrame(void)
 {
   if (g_mit_tx_started == 0U || g_ctrl.motors_enabled == 0U) {
+    return;
+  }
+  if (HasPendingMotorCommand()) {
     return;
   }
   if ((int32_t)(HAL_GetTick() - g_mit_pause_until_ms) < 0) {
