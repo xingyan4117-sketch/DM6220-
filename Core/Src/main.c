@@ -193,7 +193,9 @@ int main(void)
   MX_GPIO_Init();
   MX_DMA_Init();
   MX_ADC1_Init();
+#if !USE_ANALOG_SPI
   MX_SPI1_Init();
+#endif
   MX_FDCAN1_Init();
   MX_FDCAN2_Init();
 
