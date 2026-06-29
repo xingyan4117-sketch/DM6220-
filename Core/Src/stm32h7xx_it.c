@@ -54,7 +54,6 @@
 static void fault_blink(void)
 {
   LCD_BLK_Set(1);
-  LCD_Fill(0, 0, LCD_W, LCD_H, MAGENTA);
   while (1)
   {
   }

@@ -17,6 +17,7 @@
 
 #define LCD_BOOT_SELF_TEST 0U
 #define LVGL_MINIMAL_TEST 1U
+#define LVGL_STAGE_DIAG 1U
 
 uint16_t adc_val[2];
 
@@ -193,17 +194,31 @@ static void ManualJogTask(uint32_t now_ms)
 #endif
 
 #if LCD_BOOT_SELF_TEST == 0U && LVGL_MINIMAL_TEST
+static void LvglStage(uint16_t color)
+{
+#if LVGL_STAGE_DIAG
+  LCD_Fill(0, 0, LCD_W, LCD_H, color);
+  HAL_Delay(120);
+#else
+  (void)color;
+#endif
+}
+
 static void LvglMinimalUi_Init(void)
 {
   lv_obj_t *label;
 
+  LvglStage(CYAN);
   lv_obj_set_style_bg_color(lv_screen_active(), lv_color_hex(0x102030), 0);
   lv_obj_set_style_bg_opa(lv_screen_active(), LV_OPA_COVER, 0);
+  LvglStage(YELLOW);
   label = lv_label_create(lv_screen_active());
+  LvglStage(LIGHTBLUE);
   lv_label_set_text(label, "LVGL OK");
   lv_obj_set_style_text_color(label, lv_color_hex(0xffffff), 0);
   lv_obj_set_style_text_font(label, &lv_font_montserrat_16, 0);
   lv_obj_center(label);
+  LvglStage(GREEN);
 }
 #endif
 
@@ -259,14 +274,19 @@ int main(void)
 
   LCD_Init();
 #if LCD_BOOT_SELF_TEST == 0U
+  LvglStage(BLUE);
   lv_init();
+  LvglStage(GREEN);
   lv_tick_set_cb(HAL_GetTick);
+  LvglStage(CYAN);
 #if LVGL_MINIMAL_TEST == 0U
   LvPortDisp_SetServiceCallback(DisplayServiceDuringFlush);
 #else
   LvPortDisp_SetServiceCallback(0);
 #endif
+  LvglStage(YELLOW);
   LvPortDisp_Init();
+  LvglStage(LIGHTGREEN);
 #if LVGL_MINIMAL_TEST == 0U
   LvPortIndev_Init();
   GimbalLvglUi_Init(&g_ctrl, &DM_Motor_Yaw, &DM_Motor_Pitch);
@@ -274,7 +294,9 @@ int main(void)
 #else
   LvglMinimalUi_Init();
 #endif
+  LvglStage(WHITE);
   (void)lv_timer_handler();
+  LvglStage(BLACK);
 #else
   LCD_Fill(0, 0, LCD_W, LCD_H, RED);
 #endif
