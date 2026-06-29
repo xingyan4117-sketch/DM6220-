@@ -821,8 +821,6 @@ void LCD_Init(void)
 	LCD_RES_Set();
 	HAL_Delay(100);
 	
-	LCD_BLK_Set();//´ò¿ª±³¹â
-  HAL_Delay(100);
 	
 	//************* Start Initial Sequence **********//
 	LCD_WR_REG(0x11); //Sleep out 
@@ -900,5 +898,8 @@ void LCD_Init(void)
 	LCD_WR_REG(0x21); 
 
 	LCD_WR_REG(0x29);
+	HAL_Delay(20);
+	LCD_Fill(0, 0, LCD_W, LCD_H, BLACK);
+	LCD_BLK_Set();
 }
 

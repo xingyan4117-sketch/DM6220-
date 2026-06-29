@@ -20,18 +20,22 @@
 uint16_t adc_val[2];
 
 static GimbalControlState g_ctrl;
+#if LCD_BOOT_SELF_TEST == 0U
 static GimbalMitCommand g_cmd;
 static uint8_t g_mit_tx_started;
+#endif
 static uint32_t g_mit_pause_until_ms;
 
 void SystemClock_Config(void);
 
+#if LCD_BOOT_SELF_TEST == 0U
 static uint8_t HasPendingMotorCommand(void)
 {
   return (g_ctrl.req_disable_yaw || g_ctrl.req_disable_pitch ||
           g_ctrl.req_enable_yaw || g_ctrl.req_enable_pitch ||
           g_ctrl.req_save_zero_yaw || g_ctrl.req_save_zero_pitch) ? 1U : 0U;
 }
+#endif
 
 static void PauseMitFor(uint32_t now_ms, uint32_t duration_ms)
 {
@@ -41,6 +45,7 @@ static void PauseMitFor(uint32_t now_ms, uint32_t duration_ms)
   }
 }
 
+#if LCD_BOOT_SELF_TEST == 0U
 static void Motors_BootEnable(void)
 {
   DM_Motor_Command(&FDCAN1TxFrame, 0x01, Motor_Enable);
@@ -54,6 +59,7 @@ static void Motors_BootEnable(void)
   MOTOR_SEND_PITCH(&FDCAN2TxFrame, &DM_Motor_Pitch, MIT_Mode,
                    0.0f, 0.0f, g_ctrl.kp, g_ctrl.kd, g_ctrl.torque_ff);
 }
+#endif
 
 static void ApplyControlRequests(void)
 {
@@ -112,6 +118,7 @@ static void ApplyControlRequests(void)
   }
 }
 
+#if LCD_BOOT_SELF_TEST == 0U
 static void SendMitFrame(void)
 {
   if (g_mit_tx_started == 0U || g_ctrl.motors_enabled == 0U) {
@@ -131,6 +138,7 @@ static void SendMitFrame(void)
                    g_cmd.pitch_pos_rad, g_cmd.pitch_vel_rad_s,
                    g_cmd.kp, g_cmd.kd, g_cmd.torque_ff);
 }
+#endif
 
 #if LCD_BOOT_SELF_TEST == 0U
 static void DisplayServiceDuringFlush(void)
@@ -244,9 +252,14 @@ int main(void)
 #endif
 
   HAL_Delay(500);
+#if LCD_BOOT_SELF_TEST == 0U
   Motors_BootEnable();
   GimbalControl_Update(&g_ctrl, HAL_GetTick(), &g_cmd);
   g_mit_tx_started = 1U;
+#else
+  g_ctrl.mode = CTRL_STOP;
+  g_ctrl.motors_enabled = 0U;
+#endif
 
   last_loop_ms = HAL_GetTick();
 
@@ -269,9 +282,9 @@ int main(void)
       ApplyControlRequests();
 #if LCD_BOOT_SELF_TEST == 0U
       ManualJogTask(now);
-#endif
       GimbalControl_Update(&g_ctrl, now, &g_cmd);
       SendMitFrame();
+#endif
 
 #if LCD_BOOT_SELF_TEST
       LcdBootSelfTestTask(now);

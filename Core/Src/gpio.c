@@ -76,7 +76,7 @@ void MX_GPIO_Init(void)
   /* LCD_BLK: PB10, 推挽输出, 默认高(开背光) */
   GPIO_InitStruct.Pin  = LCD_BLK_Pin;
   HAL_GPIO_Init(LCD_BLK_GPIO_Port, &GPIO_InitStruct);
-  HAL_GPIO_WritePin(LCD_BLK_GPIO_Port, LCD_BLK_Pin, GPIO_PIN_SET);
+  HAL_GPIO_WritePin(LCD_BLK_GPIO_Port, LCD_BLK_Pin, GPIO_PIN_RESET);
 
   /* LCD_RES: PB11, 推挽输出 */
   GPIO_InitStruct.Pin  = LCD_RES_Pin;
