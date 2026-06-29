@@ -18,9 +18,12 @@
 *.uvgui.*
 *.dep
 *.bak
+*.__i
+*._ia
 
 # Local build logs
 codex_build.log
+codex_*.log
 build.log
 
 # Common editor/system files
@@ -28,4 +31,3 @@ build.log
 Thumbs.db
 *.swp
 *.tmp
-

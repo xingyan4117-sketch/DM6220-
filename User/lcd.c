@@ -66,6 +66,52 @@ void LCD_WR_DATA(uint16_t dat)
 * @details:    	通过调用LCD_Writ_Bus函数向LCD写入寄存器地址。
 ************************************************************************
 **/
+
+void LCD_Write_Data_Buffer(const uint8_t *data, uint32_t size)
+{
+  uint32_t offset = 0U;
+  if (data == 0 || size == 0U) {
+    return;
+  }
+
+  LCD_CS_Clr();
+#if USE_ANALOG_SPI
+  while (offset < size) {
+    LCD_Writ_Bus(data[offset]);
+    offset++;
+  }
+#else
+  while (offset < size) {
+    uint16_t chunk = (size - offset) > 65535U ? 65535U : (uint16_t)(size - offset);
+    (void)HAL_SPI_Transmit(&hspi1, (uint8_t *)&data[offset], chunk, 0xffff);
+    offset += chunk;
+  }
+#endif
+  LCD_CS_Set();
+}
+
+void LCD_Write_Color_Buffer(const uint16_t *color, uint32_t count)
+{
+  uint32_t i;
+  uint8_t pair[2];
+
+  if (color == 0 || count == 0U) {
+    return;
+  }
+
+  LCD_CS_Clr();
+  for (i = 0U; i < count; i++) {
+    pair[0] = (uint8_t)(color[i] >> 8);
+    pair[1] = (uint8_t)(color[i] & 0xffU);
+#if USE_ANALOG_SPI
+    LCD_Writ_Bus(pair[0]);
+    LCD_Writ_Bus(pair[1]);
+#else
+    (void)HAL_SPI_Transmit(&hspi1, pair, 2U, 0xffff);
+#endif
+  }
+  LCD_CS_Set();
+}
 void LCD_WR_REG(uint8_t dat)
 {
 	LCD_DC_Clr();//写命令

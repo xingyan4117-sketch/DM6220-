@@ -8,15 +8,17 @@
 #include "bsp_can.h"
 #include "Motor.h"
 #include "lcd.h"
+#include "lvgl.h"
+#include "lv_port_disp.h"
+#include "lv_port_indev.h"
 #include "gimbal_control.h"
 #include "gimbal_keys.h"
-#include "gimbal_menu.h"
+#include "gimbal_lvgl_ui.h"
 
 uint16_t adc_val[2];
 
 static GimbalControlState g_ctrl;
 static GimbalMitCommand g_cmd;
-static GimbalMenu g_menu;
 static uint8_t g_mit_tx_started;
 static uint32_t g_mit_pause_until_ms;
 
@@ -128,12 +130,25 @@ static void SendMitFrame(void)
                    g_cmd.kp, g_cmd.kd, g_cmd.torque_ff);
 }
 
+static void DisplayServiceDuringFlush(void)
+{
+  static uint32_t last_service_ms = 0U;
+  uint32_t now = HAL_GetTick();
+
+  if ((now - last_service_ms) >= 1U) {
+    last_service_ms = now;
+    ApplyControlRequests();
+    GimbalControl_Update(&g_ctrl, now, &g_cmd);
+    SendMitFrame();
+  }
+}
+
 static void ManualJogTask(uint32_t now_ms)
 {
   static uint32_t last_jog_ms = 0U;
   GimbalKeyId held;
 
-  if (g_ctrl.mode != CTRL_MANUAL || GimbalMenu_IsStatusPage() == 0U) {
+  if (g_ctrl.mode != CTRL_MANUAL || GimbalLvglUi_IsStatusPage() == 0U) {
     last_jog_ms = now_ms;
     return;
   }
@@ -164,23 +179,11 @@ static void ManualJogTask(uint32_t now_ms)
   }
 }
 
-static void MenuServiceDuringDraw(void)
-{
-  static uint32_t last_service_ms = 0U;
-  uint32_t now = HAL_GetTick();
-
-  if ((now - last_service_ms) >= 1U) {
-    last_service_ms = now;
-    GimbalControl_Update(&g_ctrl, now, &g_cmd);
-    SendMitFrame();
-  }
-}
-
 int main(void)
 {
   uint32_t last_loop_ms;
   uint32_t last_key_ms = 0U;
-  uint32_t last_lcd_ms = 0U;
+  uint32_t last_lvgl_ms = 0U;
   GimbalKeyEvent key_event;
 
   HAL_Init();
@@ -190,21 +193,25 @@ int main(void)
   MX_GPIO_Init();
   MX_DMA_Init();
   MX_ADC1_Init();
+  MX_SPI1_Init();
   MX_FDCAN1_Init();
   MX_FDCAN2_Init();
 
   BSP_FDCAN_Init();
   GimbalControl_Init(&g_ctrl);
   GimbalKeys_Init();
-  GimbalMenu_Init(&g_menu);
-  GimbalMenu_SetServiceCallback(MenuServiceDuringDraw);
 
   HAL_ADCEx_Calibration_Start(&hadc1, ADC_CALIB_OFFSET, ADC_SINGLE_ENDED);
 
   LCD_Init();
-  while (GimbalMenu_NeedsRedraw()) {
-    GimbalMenu_Render(&g_menu, &g_ctrl, &DM_Motor_Yaw, &DM_Motor_Pitch, GimbalKeys_GetAdcRaw());
-  }
+  lv_init();
+  lv_tick_set_cb(HAL_GetTick);
+  LvPortDisp_SetServiceCallback(DisplayServiceDuringFlush);
+  LvPortDisp_Init();
+  LvPortIndev_Init();
+  GimbalLvglUi_Init(&g_ctrl, &DM_Motor_Yaw, &DM_Motor_Pitch);
+  GimbalLvglUi_Task(HAL_GetTick(), GimbalKeys_GetAdcRaw());
+  (void)lv_timer_handler();
 
   HAL_Delay(500);
   Motors_BootEnable();
@@ -226,11 +233,7 @@ int main(void)
       }
 
       while (GimbalKeys_GetEvent(&key_event)) {
-        GimbalMenu_HandleEvent(&g_menu, &g_ctrl, &key_event, now, &DM_Motor_Yaw, &DM_Motor_Pitch);
-        if (g_ctrl.lcd_on && GimbalMenu_NeedsRedraw()) {
-          GimbalMenu_Render(&g_menu, &g_ctrl, &DM_Motor_Yaw, &DM_Motor_Pitch, GimbalKeys_GetAdcRaw());
-          last_lcd_ms = now;
-        }
+        GimbalLvglUi_HandleEvent(&key_event, now);
       }
 
       ApplyControlRequests();
@@ -238,13 +241,11 @@ int main(void)
       GimbalControl_Update(&g_ctrl, now, &g_cmd);
       SendMitFrame();
 
-      if (g_ctrl.lcd_on && GimbalMenu_NeedsRedraw()) {
-        GimbalMenu_Render(&g_menu, &g_ctrl, &DM_Motor_Yaw, &DM_Motor_Pitch, GimbalKeys_GetAdcRaw());
-        last_lcd_ms = now;
-      } else if ((now - last_lcd_ms) >= 250U) {
-        last_lcd_ms = now;
-        if (g_ctrl.lcd_on && GimbalMenu_IsStatusPage()) {
-          GimbalMenu_Render(&g_menu, &g_ctrl, &DM_Motor_Yaw, &DM_Motor_Pitch, GimbalKeys_GetAdcRaw());
+      if (g_ctrl.lcd_on) {
+        GimbalLvglUi_Task(now, GimbalKeys_GetAdcRaw());
+        if ((now - last_lvgl_ms) >= 20U) {
+          last_lvgl_ms = now;
+          (void)lv_timer_handler();
         }
       }
     }
