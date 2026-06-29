@@ -13,7 +13,7 @@
 #endif
 
 static lv_display_t *s_display;
-static uint16_t s_draw_buf[LCD_W * LV_PORT_BUF_LINES];
+LV_DRAW_BUF_DEFINE_STATIC(s_lv_draw_buf, LCD_W, LV_PORT_BUF_LINES, LV_COLOR_FORMAT_RGB565);
 #if LV_PORT_USE_BULK_SPI_FLUSH
 static uint8_t s_tx_buf[LV_PORT_TX_CHUNK_PIXELS * 2U];
 #endif
@@ -83,5 +83,7 @@ void LvPortDisp_Init(void)
   s_display = lv_display_create(LCD_W, LCD_H);
   lv_display_set_color_format(s_display, LV_COLOR_FORMAT_RGB565);
   lv_display_set_flush_cb(s_display, lv_port_flush_cb);
-  lv_display_set_buffers(s_display, s_draw_buf, NULL, sizeof(s_draw_buf), LV_DISPLAY_RENDER_MODE_PARTIAL);
+  LV_DRAW_BUF_INIT_STATIC(s_lv_draw_buf);
+  lv_display_set_draw_buffers(s_display, &s_lv_draw_buf, NULL);
+  lv_display_set_render_mode(s_display, LV_DISPLAY_RENDER_MODE_PARTIAL);
 }
