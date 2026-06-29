@@ -21,6 +21,7 @@
 #include "stm32h7xx_it.h"
 /* 私有头文件包含 --------------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
+#include "lcd.h"
 /* USER CODE END Includes */
 
 /* 私有类型定义 ----------------------------------------------------------------*/
@@ -52,11 +53,10 @@
 /* USER CODE BEGIN 0 */
 static void fault_blink(void)
 {
+  LCD_BLK_Set(1);
+  LCD_Fill(0, 0, LCD_W, LCD_H, MAGENTA);
   while (1)
   {
-    HAL_GPIO_TogglePin(LCD_BLK_GPIO_Port, LCD_BLK_Pin);
-    for (volatile uint32_t i = 0U; i < 350000U; i++) {
-    }
   }
 }
 

@@ -16,11 +16,12 @@
 #include "gimbal_lvgl_ui.h"
 
 #define LCD_BOOT_SELF_TEST 0U
+#define LVGL_MINIMAL_TEST 1U
 
 uint16_t adc_val[2];
 
 static GimbalControlState g_ctrl;
-#if LCD_BOOT_SELF_TEST == 0U
+#if LCD_BOOT_SELF_TEST == 0U && LVGL_MINIMAL_TEST == 0U
 static GimbalMitCommand g_cmd;
 static uint8_t g_mit_tx_started;
 #endif
@@ -28,7 +29,7 @@ static uint32_t g_mit_pause_until_ms;
 
 void SystemClock_Config(void);
 
-#if LCD_BOOT_SELF_TEST == 0U
+#if LCD_BOOT_SELF_TEST == 0U && LVGL_MINIMAL_TEST == 0U
 static uint8_t HasPendingMotorCommand(void)
 {
   return (g_ctrl.req_disable_yaw || g_ctrl.req_disable_pitch ||
@@ -45,7 +46,7 @@ static void PauseMitFor(uint32_t now_ms, uint32_t duration_ms)
   }
 }
 
-#if LCD_BOOT_SELF_TEST == 0U
+#if LCD_BOOT_SELF_TEST == 0U && LVGL_MINIMAL_TEST == 0U
 static void Motors_BootEnable(void)
 {
   DM_Motor_Command(&FDCAN1TxFrame, 0x01, Motor_Enable);
@@ -118,7 +119,7 @@ static void ApplyControlRequests(void)
   }
 }
 
-#if LCD_BOOT_SELF_TEST == 0U
+#if LCD_BOOT_SELF_TEST == 0U && LVGL_MINIMAL_TEST == 0U
 static void SendMitFrame(void)
 {
   if (g_mit_tx_started == 0U || g_ctrl.motors_enabled == 0U) {
@@ -140,7 +141,7 @@ static void SendMitFrame(void)
 }
 #endif
 
-#if LCD_BOOT_SELF_TEST == 0U
+#if LCD_BOOT_SELF_TEST == 0U && LVGL_MINIMAL_TEST == 0U
 static void DisplayServiceDuringFlush(void)
 {
   static uint32_t last_service_ms = 0U;
@@ -191,6 +192,21 @@ static void ManualJogTask(uint32_t now_ms)
 }
 #endif
 
+#if LCD_BOOT_SELF_TEST == 0U && LVGL_MINIMAL_TEST
+static void LvglMinimalUi_Init(void)
+{
+  lv_obj_t *label;
+
+  lv_obj_set_style_bg_color(lv_screen_active(), lv_color_hex(0x102030), 0);
+  lv_obj_set_style_bg_opa(lv_screen_active(), LV_OPA_COVER, 0);
+  label = lv_label_create(lv_screen_active());
+  lv_label_set_text(label, "LVGL OK");
+  lv_obj_set_style_text_color(label, lv_color_hex(0xffffff), 0);
+  lv_obj_set_style_text_font(label, &lv_font_montserrat_16, 0);
+  lv_obj_center(label);
+}
+#endif
+
 #if LCD_BOOT_SELF_TEST
 static void LcdBootSelfTestTask(uint32_t now_ms)
 {
@@ -218,7 +234,9 @@ int main(void)
 #if LCD_BOOT_SELF_TEST == 0U
   uint32_t last_lvgl_ms = 0U;
 #endif
+#if LVGL_MINIMAL_TEST == 0U
   GimbalKeyEvent key_event;
+#endif
 
   HAL_Init();
   SystemClock_Config();
@@ -243,18 +261,26 @@ int main(void)
 #if LCD_BOOT_SELF_TEST == 0U
   lv_init();
   lv_tick_set_cb(HAL_GetTick);
+#if LVGL_MINIMAL_TEST == 0U
   LvPortDisp_SetServiceCallback(DisplayServiceDuringFlush);
+#else
+  LvPortDisp_SetServiceCallback(0);
+#endif
   LvPortDisp_Init();
+#if LVGL_MINIMAL_TEST == 0U
   LvPortIndev_Init();
   GimbalLvglUi_Init(&g_ctrl, &DM_Motor_Yaw, &DM_Motor_Pitch);
   GimbalLvglUi_Task(HAL_GetTick(), GimbalKeys_GetAdcRaw());
+#else
+  LvglMinimalUi_Init();
+#endif
   (void)lv_timer_handler();
 #else
   LCD_Fill(0, 0, LCD_W, LCD_H, RED);
 #endif
 
   HAL_Delay(500);
-#if LCD_BOOT_SELF_TEST == 0U
+#if LCD_BOOT_SELF_TEST == 0U && LVGL_MINIMAL_TEST == 0U
   Motors_BootEnable();
   GimbalControl_Update(&g_ctrl, HAL_GetTick(), &g_cmd);
   g_mit_tx_started = 1U;
@@ -277,12 +303,14 @@ int main(void)
         GimbalKeys_Task(now);
       }
 
+#if LVGL_MINIMAL_TEST == 0U
       while (GimbalKeys_GetEvent(&key_event)) {
         GimbalLvglUi_HandleEvent(&key_event, now);
       }
+#endif
 
       ApplyControlRequests();
-#if LCD_BOOT_SELF_TEST == 0U
+#if LCD_BOOT_SELF_TEST == 0U && LVGL_MINIMAL_TEST == 0U
       ManualJogTask(now);
       GimbalControl_Update(&g_ctrl, now, &g_cmd);
       SendMitFrame();
@@ -291,6 +319,7 @@ int main(void)
 #if LCD_BOOT_SELF_TEST
       LcdBootSelfTestTask(now);
 #else
+#if LVGL_MINIMAL_TEST == 0U
       if (g_ctrl.lcd_on) {
         GimbalLvglUi_Task(now, GimbalKeys_GetAdcRaw());
         if ((now - last_lvgl_ms) >= 20U) {
@@ -298,6 +327,12 @@ int main(void)
           (void)lv_timer_handler();
         }
       }
+#else
+      if ((now - last_lvgl_ms) >= 20U) {
+        last_lvgl_ms = now;
+        (void)lv_timer_handler();
+      }
+#endif
 #endif
     }
   }
@@ -350,11 +385,10 @@ void SystemClock_Config(void)
 void Error_Handler(void)
 {
   __disable_irq();
+  LCD_BLK_Set(1);
+  LCD_Fill(0, 0, LCD_W, LCD_H, RED);
   while (1)
   {
-    HAL_GPIO_TogglePin(LCD_BLK_GPIO_Port, LCD_BLK_Pin);
-    for (volatile uint32_t i = 0U; i < 1200000U; i++) {
-    }
   }
 }
 
