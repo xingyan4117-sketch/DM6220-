@@ -33,7 +33,7 @@ static void lv_port_flush_cb(lv_display_t *disp, const lv_area_t *area, uint8_t 
 #if LV_PORT_USE_BULK_SPI_FLUSH
   uint32_t tx_count = 0U;
 #endif
-  uint16_t *src = (uint16_t *)px_map;
+  uint8_t *src = px_map;
 
   if (area->x2 < 0 || area->y2 < 0 || area->x1 >= LCD_W || area->y1 >= LCD_H) {
     lv_display_flush_ready(disp);
@@ -43,18 +43,19 @@ static void lv_port_flush_cb(lv_display_t *disp, const lv_area_t *area, uint8_t 
   LCD_Address_Set((uint16_t)area->x1, (uint16_t)area->y1, (uint16_t)area->x2, (uint16_t)area->y2);
   for (y = area->y1; y <= area->y2; y++) {
     for (x = area->x1; x <= area->x2; x++) {
-      uint16_t c = *src++;
+      uint8_t lo = *src++;
+      uint8_t hi = *src++;
 #if LV_PORT_USE_BULK_SPI_FLUSH
-      s_tx_buf[tx_count++] = (uint8_t)(c >> 8);
-      s_tx_buf[tx_count++] = (uint8_t)(c & 0xffU);
+      s_tx_buf[tx_count++] = hi;
+      s_tx_buf[tx_count++] = lo;
       if (tx_count >= sizeof(s_tx_buf)) {
         LCD_Write_Data_Buffer(s_tx_buf, tx_count);
         tx_count = 0U;
         service_during_flush();
       }
 #else
-      LCD_WR_DATA8((uint8_t)(c >> 8));
-      LCD_WR_DATA8((uint8_t)(c & 0xffU));
+      LCD_WR_DATA8(hi);
+      LCD_WR_DATA8(lo);
       if ((((uint32_t)(x - area->x1)) & 0x0FU) == 0U) {
         service_during_flush();
       }
