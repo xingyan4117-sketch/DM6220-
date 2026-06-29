@@ -15,7 +15,7 @@
 #include "gimbal_keys.h"
 #include "gimbal_lvgl_ui.h"
 
-#define LCD_BOOT_SELF_TEST 1U
+#define LCD_BOOT_SELF_TEST 0U
 
 uint16_t adc_val[2];
 
@@ -191,6 +191,7 @@ static void ManualJogTask(uint32_t now_ms)
 }
 #endif
 
+#if LCD_BOOT_SELF_TEST
 static void LcdBootSelfTestTask(uint32_t now_ms)
 {
   static uint32_t last_change_ms = 0U;
@@ -208,6 +209,7 @@ static void LcdBootSelfTestTask(uint32_t now_ms)
     color_index = 0U;
   }
 }
+#endif
 
 int main(void)
 {
