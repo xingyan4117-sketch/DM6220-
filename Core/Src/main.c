@@ -15,6 +15,8 @@
 #include "gimbal_keys.h"
 #include "gimbal_lvgl_ui.h"
 
+#define LCD_BOOT_SELF_TEST 1U
+
 uint16_t adc_val[2];
 
 static GimbalControlState g_ctrl;
@@ -130,6 +132,7 @@ static void SendMitFrame(void)
                    g_cmd.kp, g_cmd.kd, g_cmd.torque_ff);
 }
 
+#if LCD_BOOT_SELF_TEST == 0U
 static void DisplayServiceDuringFlush(void)
 {
   static uint32_t last_service_ms = 0U;
@@ -178,12 +181,33 @@ static void ManualJogTask(uint32_t now_ms)
     GimbalKeys_MarkHeldUsed();
   }
 }
+#endif
+
+static void LcdBootSelfTestTask(uint32_t now_ms)
+{
+  static uint32_t last_change_ms = 0U;
+  static uint8_t color_index = 0U;
+  static const uint16_t colors[] = {RED, GREEN, BLUE, BLACK, WHITE};
+
+  if ((now_ms - last_change_ms) < 800U) {
+    return;
+  }
+
+  last_change_ms = now_ms;
+  LCD_Fill(0, 0, LCD_W, LCD_H, colors[color_index]);
+  color_index++;
+  if (color_index >= (uint8_t)(sizeof(colors) / sizeof(colors[0]))) {
+    color_index = 0U;
+  }
+}
 
 int main(void)
 {
   uint32_t last_loop_ms;
   uint32_t last_key_ms = 0U;
+#if LCD_BOOT_SELF_TEST == 0U
   uint32_t last_lvgl_ms = 0U;
+#endif
   GimbalKeyEvent key_event;
 
   HAL_Init();
@@ -206,6 +230,7 @@ int main(void)
   HAL_ADCEx_Calibration_Start(&hadc1, ADC_CALIB_OFFSET, ADC_SINGLE_ENDED);
 
   LCD_Init();
+#if LCD_BOOT_SELF_TEST == 0U
   lv_init();
   lv_tick_set_cb(HAL_GetTick);
   LvPortDisp_SetServiceCallback(DisplayServiceDuringFlush);
@@ -214,6 +239,9 @@ int main(void)
   GimbalLvglUi_Init(&g_ctrl, &DM_Motor_Yaw, &DM_Motor_Pitch);
   GimbalLvglUi_Task(HAL_GetTick(), GimbalKeys_GetAdcRaw());
   (void)lv_timer_handler();
+#else
+  LCD_Fill(0, 0, LCD_W, LCD_H, RED);
+#endif
 
   HAL_Delay(500);
   Motors_BootEnable();
@@ -239,10 +267,15 @@ int main(void)
       }
 
       ApplyControlRequests();
+#if LCD_BOOT_SELF_TEST == 0U
       ManualJogTask(now);
+#endif
       GimbalControl_Update(&g_ctrl, now, &g_cmd);
       SendMitFrame();
 
+#if LCD_BOOT_SELF_TEST
+      LcdBootSelfTestTask(now);
+#else
       if (g_ctrl.lcd_on) {
         GimbalLvglUi_Task(now, GimbalKeys_GetAdcRaw());
         if ((now - last_lvgl_ms) >= 20U) {
@@ -250,6 +283,7 @@ int main(void)
           (void)lv_timer_handler();
         }
       }
+#endif
     }
   }
 }
