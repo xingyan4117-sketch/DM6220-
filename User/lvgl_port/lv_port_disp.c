@@ -3,11 +3,20 @@
 #include <string.h>
 
 #define LV_PORT_BUF_LINES 24U
+
+/* Keep LVGL on the same byte-write path as the original LCD UI first.
+ * The 1.69 in module is sensitive to long CS-low SPI bursts on this board. */
+#define LV_PORT_USE_BULK_SPI_FLUSH 0U
+
+#if LV_PORT_USE_BULK_SPI_FLUSH
 #define LV_PORT_TX_CHUNK_PIXELS 280U
+#endif
 
 static lv_display_t *s_display;
 static uint16_t s_draw_buf[LCD_W * LV_PORT_BUF_LINES];
+#if LV_PORT_USE_BULK_SPI_FLUSH
 static uint8_t s_tx_buf[LV_PORT_TX_CHUNK_PIXELS * 2U];
+#endif
 static LvPortDisp_ServiceCallback s_service_callback;
 
 static void service_during_flush(void)
@@ -21,7 +30,9 @@ static void lv_port_flush_cb(lv_display_t *disp, const lv_area_t *area, uint8_t 
 {
   int32_t x;
   int32_t y;
+#if LV_PORT_USE_BULK_SPI_FLUSH
   uint32_t tx_count = 0U;
+#endif
   uint16_t *src = (uint16_t *)px_map;
 
   if (area->x2 < 0 || area->y2 < 0 || area->x1 >= LCD_W || area->y1 >= LCD_H) {
@@ -33,6 +44,7 @@ static void lv_port_flush_cb(lv_display_t *disp, const lv_area_t *area, uint8_t 
   for (y = area->y1; y <= area->y2; y++) {
     for (x = area->x1; x <= area->x2; x++) {
       uint16_t c = *src++;
+#if LV_PORT_USE_BULK_SPI_FLUSH
       s_tx_buf[tx_count++] = (uint8_t)(c >> 8);
       s_tx_buf[tx_count++] = (uint8_t)(c & 0xffU);
       if (tx_count >= sizeof(s_tx_buf)) {
@@ -40,12 +52,23 @@ static void lv_port_flush_cb(lv_display_t *disp, const lv_area_t *area, uint8_t 
         tx_count = 0U;
         service_during_flush();
       }
+#else
+      LCD_WR_DATA8((uint8_t)(c >> 8));
+      LCD_WR_DATA8((uint8_t)(c & 0xffU));
+      if ((((uint32_t)(x - area->x1)) & 0x0FU) == 0U) {
+        service_during_flush();
+      }
+#endif
     }
   }
+#if LV_PORT_USE_BULK_SPI_FLUSH
   if (tx_count > 0U) {
     LCD_Write_Data_Buffer(s_tx_buf, tx_count);
     service_during_flush();
   }
+#else
+  service_during_flush();
+#endif
 
   lv_display_flush_ready(disp);
 }
@@ -58,6 +81,7 @@ void LvPortDisp_SetServiceCallback(LvPortDisp_ServiceCallback callback)
 void LvPortDisp_Init(void)
 {
   s_display = lv_display_create(LCD_W, LCD_H);
+  lv_display_set_color_format(s_display, LV_COLOR_FORMAT_RGB565);
   lv_display_set_flush_cb(s_display, lv_port_flush_cb);
   lv_display_set_buffers(s_display, s_draw_buf, NULL, sizeof(s_draw_buf), LV_DISPLAY_RENDER_MODE_PARTIAL);
 }
