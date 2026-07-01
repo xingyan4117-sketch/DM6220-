@@ -37,7 +37,8 @@ typedef enum {
   EDIT_PITCH_AMP,
   EDIT_PERIOD,
   EDIT_CIRCLE_PERIOD,
-  EDIT_CIRCLE_RADIUS,
+  EDIT_CIRCLE_YAW_RADIUS,
+  EDIT_CIRCLE_PITCH_RADIUS,
   EDIT_SQUARE_EDGE
 } EditTarget;
 
@@ -73,7 +74,7 @@ static GimbalMenu_ServiceCallback service_callback;
 static const char *main_items[] = {"Run", "Trajectory", "Laser", "Settings"};
 static const char *run_items[] = {"Stop", "Manual Jog", "Home"};
 static const char *trajectory_items[] = {"Circle", "Square"};
-static const char *circle_items[] = {"Circle Run", "Circle Speed", "Circle Radius"};
+static const char *circle_items[] = {"Circle Run", "Circle Speed", "Radius YAW", "Radius PIT"};
 static const char *param_items[] = {"KP", "KD", "Torque FF", "Amp YAW", "Amp Pitch", "Period", "Reset Default"};
 static const char *zero_items[] = {"Set Soft Zero", "Save Zero YAW", "Save Zero Pitch", "Save Both Zero"};
 static const char *square_items[] = {"Start Calib", "Edge Time", "Square Run", "Pause/Resume", "Reset to LB", "Clear Calib"};
@@ -303,8 +304,9 @@ static void edit_change(GimbalControlState *ctrl, int8_t dir)
       next = 5000;
     }
     *duration = (uint16_t)next;
-  } else if (editing == EDIT_CIRCLE_RADIUS) {
+  } else if (editing == EDIT_CIRCLE_YAW_RADIUS) {
     ctrl->yaw_amp_deg += 1.0f * (float)dir;
+  } else if (editing == EDIT_CIRCLE_PITCH_RADIUS) {
     ctrl->pitch_amp_deg += 1.0f * (float)dir;
   } else {
     value = edit_float(ctrl, editing);
@@ -349,8 +351,12 @@ static void circle_action(GimbalControlState *ctrl, uint8_t index, uint32_t now_
     set_msg("Circle stop edit");
   } else if (index == 2U) {
     GimbalControl_SetMode(ctrl, CTRL_STOP, now_ms);
-    editing = EDIT_CIRCLE_RADIUS;
-    set_msg("Radius stop edit");
+    editing = EDIT_CIRCLE_YAW_RADIUS;
+    set_msg("Yaw radius edit");
+  } else if (index == 3U) {
+    GimbalControl_SetMode(ctrl, CTRL_STOP, now_ms);
+    editing = EDIT_CIRCLE_PITCH_RADIUS;
+    set_msg("Pit radius edit");
   }
 }
 
@@ -676,7 +682,8 @@ void GimbalMenu_HandleEvent(GimbalMenu *menu,
       line_dirty = 1U;
     } else if (event->key == GKEY_CENTER) {
       uint8_t trajectory_edit = (editing == EDIT_CIRCLE_PERIOD ||
-                                 editing == EDIT_CIRCLE_RADIUS ||
+                                 editing == EDIT_CIRCLE_YAW_RADIUS ||
+                                 editing == EDIT_CIRCLE_PITCH_RADIUS ||
                                  editing == EDIT_SQUARE_EDGE) ? 1U : 0U;
       editing = EDIT_NONE;
       set_msg(trajectory_edit ? "Trajectory set" : "Param set");
@@ -1009,7 +1016,10 @@ static void draw_menu_line(MenuPage page, const GimbalControlState *ctrl, uint8_
       snprintf(line, sizeof(line), "Circle Speed %ums", ctrl->period_ms);
       text = line;
     } else if (index == 2U) {
-      snprintf(line, sizeof(line), "Circle Radius %.1f", ctrl->yaw_amp_deg);
+      snprintf(line, sizeof(line), "Radius YAW   %.1f", ctrl->yaw_amp_deg);
+      text = line;
+    } else if (index == 3U) {
+      snprintf(line, sizeof(line), "Radius PIT   %.1f", ctrl->pitch_amp_deg);
       text = line;
     }
   } else if (page == PAGE_SQUARE) {
