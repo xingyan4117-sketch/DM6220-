@@ -628,6 +628,31 @@
               <FileType>1</FileType>
               <FilePath>..\User\gimbal_control.c</FilePath>
             </File>
+            <File>
+              <FileName>gimbal_menu.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\User\gimbal_menu.c</FilePath>
+            </File>
+            <File>
+              <FileName>gimbal_event.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\User\gimbal_event.c</FilePath>
+            </File>
+            <File>
+              <FileName>gimbal_system.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\User\gimbal_system.c</FilePath>
+            </File>
+            <File>
+              <FileName>gimbal_laser.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\User\gimbal_laser.c</FilePath>
+            </File>
+            <File>
+              <FileName>tim.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\Core\Src\tim.c</FilePath>
+            </File>
           </Files>
         </Group>
         <Group>

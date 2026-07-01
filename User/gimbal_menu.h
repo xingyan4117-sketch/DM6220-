@@ -16,6 +16,7 @@ void GimbalMenu_SetServiceCallback(GimbalMenu_ServiceCallback callback);
 void GimbalMenu_RequestRedraw(void);
 uint8_t GimbalMenu_NeedsRedraw(void);
 uint8_t GimbalMenu_IsStatusPage(void);
+uint8_t GimbalMenu_IsSquareCalibActive(void);
 void GimbalMenu_MarkRendered(void);
 void GimbalMenu_HandleEvent(GimbalMenu *menu,
                             GimbalControlState *ctrl,

@@ -19,6 +19,7 @@
 /* 包含头文件 ------------------------------------------------------------------*/
 #include "main.h"
 #include "stm32h7xx_it.h"
+#include "tim.h"
 /* 私有头文件包含 --------------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include "lcd.h"
@@ -65,6 +66,7 @@ static void fault_blink(void)
 extern FDCAN_HandleTypeDef hfdcan1;
 extern FDCAN_HandleTypeDef hfdcan2;   /* 新增 FDCAN2 */
 extern DMA_HandleTypeDef hdma_adc1;
+extern TIM_HandleTypeDef htim6;
 /* USER CODE BEGIN EV */
 
 /* USER CODE END EV */
@@ -227,6 +229,11 @@ void FDCAN1_IT0_IRQHandler(void)
 void DMA1_Stream0_IRQHandler(void)
 {
   HAL_DMA_IRQHandler(&hdma_adc1);
+}
+
+void TIM6_DAC_IRQHandler(void)
+{
+  HAL_TIM_IRQHandler(&htim6);
 }
 
 /* USER CODE BEGIN 1 */

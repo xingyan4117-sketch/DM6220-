@@ -1,6 +1,7 @@
 #include "fdcan.h"
 #include "bsp_can.h"
 #include "Motor.h"
+#include "gimbal_event.h"
 
 /* ================================================================
  * FDCAN1 帧定义（接 电机1 / YAW 轴）PD0=RX, PD1=TX
@@ -90,5 +91,9 @@ void HAL_FDCAN_RxFifo0Callback(FDCAN_HandleTypeDef *hfdcan, uint32_t RxFifo0ITs)
             DM_Motor_Info_Update(FDCAN2_RxFrame.Data, &DM_Motor_Pitch);
             drain_count++;
         }
+    }
+
+    if (drain_count != 0U) {
+        GimbalEvent_PushFromIsr(GIMBAL_EVT_MOTOR_FEEDBACK);
     }
 }

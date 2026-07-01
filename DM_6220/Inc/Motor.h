@@ -69,7 +69,7 @@ extern DM_Motor_Info_Typedef DM_Motor_Pitch;  /* 电机2 PITCH FDCAN2 CAN_ID=0x0
  * Keep trajectory/PID code in physical gimbal coordinates.
  */
 #define YAW_INVERTED    1
-#define PITCH_INVERTED  0
+#define PITCH_INVERTED  1
 
 #define MOTOR_SEND_YAW(frame, motor, mode, pos, vel, kp, kd, trq) \
   DM_Motor_CAN_TxMessage((frame), (motor), (mode), \

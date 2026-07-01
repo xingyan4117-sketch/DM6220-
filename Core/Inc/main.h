@@ -80,6 +80,8 @@ void Error_Handler(void);
 #define MOTOR_PWR_YAW_Pin   GPIO_PIN_14   /* PC14 → YAW 电机电源 */
 #define MOTOR_PWR_PITCH_Pin GPIO_PIN_13   /* PC13 → PITCH 电机电源 */
 #define MOTOR_PWR_GPIO_Port  GPIOC
+#define PWM_5V_EN_Pin       GPIO_PIN_15   /* PC15 -> PWM connector 5V enable */
+#define PWM_5V_EN_GPIO_Port GPIOC
 
 /* USER CODE END Private defines */
 

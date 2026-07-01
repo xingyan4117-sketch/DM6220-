@@ -61,6 +61,10 @@ void MX_GPIO_Init(void)
   HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
   HAL_GPIO_WritePin(GPIOC, GPIO_PIN_13, GPIO_PIN_SET);  /* 默认开启 */
 
+  GPIO_InitStruct.Pin = PWM_5V_EN_Pin;
+  HAL_GPIO_Init(PWM_5V_EN_GPIO_Port, &GPIO_InitStruct);
+  HAL_GPIO_WritePin(PWM_5V_EN_GPIO_Port, PWM_5V_EN_Pin, GPIO_PIN_RESET);
+
   /* ---- LCD GPIO 初始化 ---- */
   __HAL_RCC_GPIOE_CLK_ENABLE();
   __HAL_RCC_GPIOB_CLK_ENABLE();
